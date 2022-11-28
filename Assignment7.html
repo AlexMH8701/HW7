@@ -1,0 +1,396 @@
+<head>
+	<title>Alexander Hoffman</title>
+	<meta charset="UTF-8">
+</head>
+<body>
+<br>
+<canvas id="myCanvas" width="1000" height="500" style="border:1px solid #cccccc;"></canvas>
+<script type="text/javascript">
+
+class Sprite
+{
+
+	//const gravity = 1.2;
+	//const ground = 800;
+	
+	constructor(x1, y1, w1, h1, image_url)
+	{
+		this.x = x1;
+		this.y = y1;
+		this.w = w1;
+		this.h = h1;
+		this.image = new Image();
+		this.image.src = image_url;
+		this.name = "sprite"
+		
+		
+		this.ground = 500;
+		this.gravity = 1;
+		
+	}
+	
+	onclick(x, y)
+	{
+		if(this.x <= x && (this.x + this.w) >= x){
+			if (this.y <= y && (this.y + this.h) >= y){
+				console.log("clicked on a " + this.name);
+			}
+		}
+			
+	}
+
+}
+class Mario extends Sprite
+{
+	constructor(x, y, w, h, image_url)
+	{
+		super(x, y, w, h, image_url);
+		this.velocity = 0;
+		this.PrevX = this.x;
+		this.PrevY = this.y;
+		this.onGround = false;
+		this.name = "mario"
+		this.frameWindowToJump = -1;
+		this.currentImage = 0;
+		this.images = [];
+		this.currentImage = 0;
+		
+		this.onPipe = false
+		this.underPipe = false
+		this.loadImages();
+		
+	}
+	
+	loadImages(){
+	
+		for(let i = 1; i < 6; i++){
+			var frame = new Image();
+			frame.src = this.name + "" + i + ".png";
+			this.images.push(frame)
+		}
+	
+	}
+	
+	yCollision(){
+		this.y = this.PrevY;
+		this.velocity = 0; 
+	}
+	
+	xCollision(){
+		this.x = this.PrevX
+	}
+
+	setPreviousPosition(){
+		this.PrevX = this.x
+		this.PrevY = this.y
+	}
+	
+	isOnPipe(p){
+		this.onGround = true;
+		this.onPipe = true;
+		this.lastCollision = new Pipe(p.x, p.y, 50, 400, "pipe.png")
+		
+		
+		this.yCollision();
+	}
+	
+	horzMove(distance){
+		if(this.currentImage == 4){
+			this.currentImage = 0;
+		}else
+			this.currentImage = this.currentImage + 1;
+			
+		this.image = this.images[this.currentImage]
+		
+		this.x = this.x + distance;
+		
+	}
+	
+	amIStillOnPipe(){
+		if(this.lastCollision === null)
+			return
+		
+		if(this.x + this.w > this.lastCollision.x && this.x < this.lastCollision.x + this.lastCollision.w)
+			return
+			
+		this.resetPipe();
+	}
+	
+	resetPipe(){
+		this.onGround = false;
+		this.onPipe = false;
+		this.lastCollision = null;
+	}
+	update()
+	{
+		if(this.onPipe === true){
+			this.amIStillOnPipe()
+		}
+	
+		if(this.y > (this.ground - this.h)){
+			this.y = this.ground - this.h
+			this.onGround = true
+		}
+		
+		if(this.onGround){
+			this.velocity = 0
+			this.frameWindowToJump = 5;
+		} else{
+			this.velocity = this.gravity + this.velocity
+			
+			if(this.frameWindowToJump > 0)
+				this.frameWindowToJump--;
+		}
+		
+		
+			
+		this.y = this.y + this.velocity
+
+			
+	}
+	
+	jump(){
+		
+		if(this.frameWindowToJump > 0){
+			this.onGround = false;
+			this.velocity = this.velocity - 5
+		}
+	}
+
+
+	
+}
+
+class Pipe extends Sprite
+{
+	
+
+	//constructor
+	constructor(x, y, w, h, image_url)
+	{
+		super(x, y, w, h, image_url);
+		this.name = "pipe"
+	}
+
+	//checks if pipe is clicked on
+	isClickedOn(x, y) {
+		
+		//bounds for if click is in range of pipe
+		if((this.x <= x && this.x >= x-w) && (this.y <= y && this.y >= y - h)) {
+			return true;
+		}
+		
+		return false;
+	}
+	
+	update()
+	{
+	}
+	
+}
+		
+
+
+
+
+class Model
+{
+	constructor()
+	{
+		this.sprites = [];
+		this.mario = new Mario(50, 50, 50, 100, "mario1.png");
+		this.sprites.push(this.mario);
+		
+		this.scrollPos = -(this.mario.x)+100
+		
+		
+		//forcibly add some sprites
+		this.sprites.push(new Pipe(-10, 150, 50, 400, "pipe.png"));
+		this.sprites.push(new Pipe(300, 450, 50, 400, "pipe.png"));
+		this.sprites.push(new Pipe(350, 425, 50, 400, "pipe.png"));
+		this.sprites.push(new Pipe(400, 400, 50, 400, "pipe.png"));
+		this.sprites.push(new Pipe(450, 375, 50, 400, "pipe.png"));
+		this.sprites.push(new Pipe(800, 250, 50, 400, "pipe.png"));
+		this.sprites.push(new Pipe(100, -50, 50, 400, "pipe.png"));
+		
+	}
+	
+			//checks if mario ISN"T colliding with a pipe
+	isThereACollision(a,b) {
+		
+		//if sprite a's rightmost part is to the left of the leftmost part of the sprite b, they are not colliding
+		if(a.x + a.w < b.x)
+			return false;
+		//if prite a's leftmost part is to the right of the rightmost part of the sprite b, they are not colliding
+		if(a.x > b.x + b.w)
+			return false;
+		//same logic as above, but vertically
+		if(a.y+a.h < b.y){
+			return false;
+			}
+		if(a.y > b.y + b.h)
+			return false;
+		
+		return true;
+	}
+	
+	//checks if mario collids with any of the sprites. If he does, tell mario that he is on a pipe
+	collisionCheck() {
+		for(let i = 0; i < this.sprites.length;i++) {
+			
+			//check if mario collides
+			if(this.sprites[i].name === "pipe") {
+				if (this.isThereACollision(this.mario,this.sprites[i])) {
+	
+					//if mario's toes are above the pipe
+					if(this.mario.PrevY + this.mario.h <= this.sprites[i].y){
+						this.mario.isOnPipe(this.sprites[i]);
+					}
+					//if marios head is under a pipe
+					else if(this.mario.PrevY >= this.sprites[i].y + this.sprites[i].h)
+						this.mario.yCollision();
+				
+					//any other collision must be an x collision
+					else
+						this.mario.xCollision();
+				}
+			}
+		}
+	}
+
+	update()
+	{
+	
+		
+	
+		for(let i = 0; i < this.sprites.length; i++)
+		{
+			this.sprites[i].update();
+		}
+		
+		this.scrollPos = -(this.mario.x)+100
+		this.collisionCheck()
+	}
+	
+
+
+	onclick(x, y)
+	{
+		for(let i = 0; i < this.sprites.length; i++)
+		{
+			this.sprites[i].onclick(x, y);
+		}
+	}
+}
+
+
+
+
+class View
+{
+	constructor(model)
+	{
+		this.model = model;
+		this.canvas = document.getElementById("myCanvas");
+		this.ctx = this.canvas.getContext("2d");
+		
+	}
+
+	update()
+	{
+		this.ctx = this.canvas.getContext("2d");
+		this.ctx.clearRect(0, 0, 1000, 500);
+		this.ctx.fillStyle = "lightblue";
+		this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+		for(let i = 0; i < this.model.sprites.length; i++)
+		{
+			let sprite = this.model.sprites[i];
+			this.ctx.drawImage(sprite.image, sprite.x + this.model.scrollPos, sprite.y);
+		}
+	}
+}
+
+
+
+
+
+
+
+class Controller
+{
+	constructor(model, view)
+	{
+		this.model = model;
+		this.view = view;
+		this.key_right = false;
+		this.key_left = false;
+		this.key_up = false;
+		this.key_down = false;
+		this.key_space = false;
+		let self = this;
+		view.canvas.addEventListener("click", function(event) { self.onClick(event); });
+		document.addEventListener('keydown', function(event) { self.keyDown(event); }, false);
+		document.addEventListener('keyup', function(event) { self.keyUp(event); }, false);
+	}
+
+	onClick(event)
+	{
+		this.model.onclick(event.pageX - this.view.canvas.offsetLeft, event.pageY - this.view.canvas.offsetTop);
+	}
+
+	keyDown(event)
+	{
+		if(event.keyCode == 39) this.key_right = true;
+		else if(event.keyCode == 37) this.key_left = true;
+		else if(event.keyCode == 38) this.key_up = true;
+		else if(event.keyCode == 40) this.key_down = true;
+		else if(event.keyCode == 32) this.key_space = true;
+	}
+
+	keyUp(event)
+	{
+		if(event.keyCode == 39) this.key_right = false;
+		else if(event.keyCode == 37) this.key_left = false;
+		else if(event.keyCode == 38) this.key_up = false;
+		else if(event.keyCode == 40) this.key_down = false;
+		else if(event.keyCode == 32) this.key_space = false;
+	}
+
+	update()
+	{
+	
+		this.model.mario.setPreviousPosition()
+		if( this.key_up === true || this.key_space === true){
+			this.model.mario.jump();
+		}
+		
+		if(this.key_right)
+			this.model.mario.horzMove(8);
+		if(this.key_left)
+			this.model.mario.horzMove(-8);
+			
+	} 
+}
+
+
+class Game
+{
+	constructor()
+	{
+		this.model = new Model();
+		this.view = new View(this.model);
+		this.controller = new Controller(this.model, this.view);
+	}
+
+	onTimer()
+	{
+		this.controller.update();
+		this.model.update();
+		this.view.update();
+	}
+}
+
+let game = new Game();
+let timer = setInterval(function() { game.onTimer(); }, 40);
+</script>
+</body>
